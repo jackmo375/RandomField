@@ -1,12 +1,21 @@
 module RandomField
 
-using FFTW, Random
+using FFTW, Random, LinearAlgebra
 
 export
 	# from functions.jl
 	gaus_rf,
 	rect_rf,
 	sinc_rf,
+
+	# from cloud.jl:
+	Cloud,
+	init!,
+	tovtk,
+	tocsv,
+	Cscalar,
+	sample!,
+	slice,
 
 	# from fourier.jl:
 	test,
@@ -21,6 +30,8 @@ export
 	#ifft
 
 include("functions.jl")
+
+include("cloud.jl")
 
 include("fourier.jl")
 
