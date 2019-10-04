@@ -6,29 +6,30 @@ using .RandomField
 N = [400,400]		# number pixels per dimension
 L = [20.0,80.0]		# real space box is [-l,l]^d
 f(V::Vector{T} where T<:Real) = gaus_rf(V)
+					# spectral density
 
 # derived parameters
 d = length(N) 		# dimension
-H = (pi/2) .* N ./L 
+H = (pi/2) .* N ./L
+var_y(V::Vector{T} where T<:Real) = 2*(2pi)^(d/2)*prod(L)/pi^d*f(V)
 
 # allocate memory
 V = Cloud(d,N)
 X = Cloud(d,N)
-F = Cscalar(V)
-G = Cscalar(X)
-G_tru = Cscalar(X)
+Y = Cscalar(V)
+Z = Cscalar(X)
 
 # initialize grids
 init!(X,L)
 init!(V,H)
 
-sample!(F,f)
+draw_realization!(Y,var_y)
 
-ift!(G,F)
+# Y ↦ Z
+ift!(Z,Y)
 
-sample!(G_tru,gaus_rf)
-
-tocsv(slice(G,2), "../data/x.g2.csv")
-tocsv(slice(G_tru,2), "../data/x.gtrue2.csv")
-
-
+# print:
+tovtk(Y, "../data/v.y.vtk")
+tocsv(slice(Y,1), "../data/v.y1.csv")
+tovtk(Z, "../data/x.z.vtk")
+tocsv(slice(Z,1), "../data/x.z1.csv")

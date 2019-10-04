@@ -7,7 +7,7 @@ n_real	= 10000		# number of realizations
 l 		= 30.0		# real space box is [-l,l]
 f 		= gaus_rf	# spectral density
 
-var_y(ν) = sqrt(8pi)*(l/pi)*f(ν)
+var_y(ν) = 2*sqrt(2pi)*(l/pi)*f(ν)
 
 # create structures (allocate memory)
 Y = Vector{ComplexF64}(undef,n)	# fourier realization

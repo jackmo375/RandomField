@@ -87,10 +87,10 @@ function ift!(G::Cscalar, F::Cscalar)
 	ifft!(reshape(G.values,dims))
 	phase_shift!(G)
 
-	for i in 1:G.cl.dim
-		G.values .*= G.cl.N[i]/G.cl.points[end,i]
-	end
-	G.values .*= (pi/2)^(G.cl.dim/2)
+	L = G.cl.points[end,1:end]
+	N = G.cl.N
+	d = G.cl.dim
+	G.values .*= (pi/2)^(d/2)*prod(N)/prod(L)
 
 end
 

@@ -101,25 +101,11 @@ function Cscalar(cl::Cloud)
 	Cscalar(cl, Vector{ComplexF64}(undef,Npoints(cl)))
 end
 
-function Npoints(N::Vector{T} where T<:Integer)
-	result = 1
-	for i in 1:length(N)
-		result *= N[i]
-	end
-	return result
-end
-
-function Npoints(cl::Cloud)
-	return Npoints(cl.N)
-end
-
-function Npoints(scl::SubCloud)
-	return Npoints(scl.N)
-end
-
-function Npoints(scs::SubCscalar)
-	return Npoints(scs.N)
-end
+Npoints(N::Vector{T} where T<:Integer) = prod(N)
+Npoints(cl::Cloud)		= Npoints(cl.N) 
+Npoints(cs::Cscalar)	= Npoints(cs.cl)
+Npoints(scl::SubCloud)	= Npoints(scl.N)
+Npoints(scs::SubCscalar)= Npoints(scs.N)
 
 function init!(
 	cl::Cloud,
@@ -144,6 +130,16 @@ function init!(
 		throw(ArgumentError("cloud dimension must be 1,2, or 3"))
 	end
 end
+
+function get_originindex(N::Vector{T} where T<:Integer)
+	if length(N)==1
+		return div(N[1],2)
+	else
+		return div(prod(N),2) + get_originindex(N[1:end-1])
+	end
+end
+get_originindex(cl::Cloud)	= get_originindex(cl.N)
+get_originindex(cs::Cscalar)= get_originindex(cs.cl.N)
 
 # sample a function, f, on a cloud as a complex scalar field
 function sample!(cs::Cscalar, f::Function)
@@ -275,4 +271,4 @@ function tocsv(scs::SubCscalar, filename)
 		throw(ArgumentError("invalid number of dimensions specified."))
 	end
 	close(f)
-end
+end	

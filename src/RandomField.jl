@@ -16,6 +16,7 @@ export
 	Cscalar,
 	sample!,
 	slice,
+	get_originindex,
 
 	# from fourier.jl:
 	test,
@@ -23,7 +24,7 @@ export
 	#phase_shift,
 	ift!,
 
-	# from process.jl
+	# from random.jl
 	draw_realization!
 
 	# from FFTW
@@ -35,6 +36,6 @@ include("cloud.jl")
 
 include("fourier.jl")
 
-include("process.jl")
+include("random.jl")
 
 end # of RandomField
