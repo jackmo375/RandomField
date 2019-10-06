@@ -3,12 +3,12 @@ using .RandomField
 
 # choose parameters:
 ## remember, we need that 4|n_i for i=1,...,d
-N = [200,200,200]		# number pixels per dimension
+N = [10,20,30]		# number pixels per dimension
 L = [80.0,80.0,80.0]	# real space box is [-l,l]^d
-d = 3			# dimension
 f(V::Vector{T} where T<:Real) = rect_rf(V)
 
 # derived parameters
+d = dim(N) # dimension
 H = (pi/2) .* N ./L 
 
 # allocate memory

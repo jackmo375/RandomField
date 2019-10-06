@@ -2,7 +2,6 @@
 #	Types
 #
 mutable struct Cloud
-	dim::Int64
 	N::Vector{Int64}
 	points::Array{Float64,2}
 end
@@ -29,48 +28,37 @@ end
 #	Functions
 #
 
-function getverts(cl::Cloud, axis::Integer)
-	if cl.dim==1
-		i_start = 1
-		i_stop  = cl.N[1]
-		verts   = collect(i_start:i_stop)
-		N 		= cl.N
-	elseif cl.dim==2
-		if axis==1
-			i_start = 1 + div(cl.N[2]*cl.N[1],2)
-			i_stop  = i_start + cl.N[1] - 1
-			verts   = collect(i_start:i_stop)
-			N = [cl.N[1],1]
-		elseif axis==2
-			i_start = 1 + div(cl.N[1],2)
-			i_stop  = cl.N[1]*cl.N[2] - 1
-			verts   = collect(i_start:cl.N[1]:i_stop)
-			N = [1,cl.N[2]]
-		else
-			throw(ArgumentError("your cloud has < 3 dimensions"))
-		end
-	elseif cl.dim==3
-		if axis==1
-			i_start = 1 + div(cl.N[3]*cl.N[2]*cl.N[1] + cl.N[2]*cl.N[1],2)
-			i_stop  = i_start + cl.N[1] - 1
-			verts   = collect(i_start:i_stop)
-			N = [cl.N[1],1,1]
-		elseif axis==2
-			i_start = 1 + div(cl.N[3]*cl.N[2]*cl.N[1] + cl.N[1],2)
-			i_stop  = i_start + cl.N[2]*cl.N[1] - 1
-			verts   = collect(i_start:cl.N[1]:i_stop)
-			N = [1,cl.N[2],1]
-		elseif axis==3
-			i_start = 1 + div(cl.N[2]*cl.N[1] + cl.N[1],2)
-			i_stop  = i_start + cl.N[3]*cl.N[2]*cl.N[1] - 1
-			verts   = collect(i_start:cl.N[2]*cl.N[1]:i_stop)
-			N = [1,1,cl.N[3]]
-		else
-			throw(ArgumentError("you can only slice in one of 3 dimensions"))
-		end
+function toint(A::Vector{Int}, N::Vector{Int})
+	if length(N)==1
+		return A[1]+1
 	else
-		throw(ArgumentError("you can only slice 2 and 3 dimension clouds"))
+		return A[end]*prod(N[1:end-1]) + toint(A[1:end-1],N[1:end-1])
 	end
+end
+
+function tovec(i::Int, N::Vector{Int})
+	if length(N)==1
+		return [rem(i-1,N[1])]
+	else
+		return vcat(tovec(i,N[1:end-1]),[rem(div(i-1,prod(N[1:end-1])),N[end])])
+	end
+end
+
+function getverts(cl::Cloud, axis::Integer)
+
+	axis <= dim(cl) || throw(ArgumentError("your cloud is $(dim(cl))-dimensional but you are asking to slice along axis $(axis)"))
+
+	A = div.(cl.N,2)
+	A[axis] = 0
+	verts = [toint(A,cl.N)]
+
+	for i=1:cl.N[axis]-1
+		A[axis] += 1
+		verts = vcat(verts,toint(A,cl.N))
+	end
+
+	N = ones(Int, dim(cl))
+	N[axis] = cl.N[axis]
 
 	return N, verts
 end
@@ -94,12 +82,18 @@ function Cloud(
 	d::Integer,
 	N::Vector{T} where T<:Integer)
 
-	Cloud(d,N,Array{Float64,2}(undef,Npoints(N),d))
+	Cloud(N,Array{Float64,2}(undef,Npoints(N),d))
 end
 
 function Cscalar(cl::Cloud)
 	Cscalar(cl, Vector{ComplexF64}(undef,Npoints(cl)))
 end
+
+dim(N::Vector{T} where T<: Integer) = length(N)
+dim(cl::Cloud)   	= dim(cl.N)
+dim(scl::SubCloud) 	= dim(scl.cl.N)
+dim(cs::Cscalar) 	= dim(cs.cl.N)
+dim(scs::SubCscalar)= dim(scs.cs.cl.N)
 
 Npoints(N::Vector{T} where T<:Integer) = prod(N)
 Npoints(cl::Cloud)		= Npoints(cl.N) 
@@ -111,35 +105,11 @@ function init!(
 	cl::Cloud,
 	L::Vector{T} where T<:AbstractFloat)
 
-	if cl.dim==1
-		for i=1:Npoints(cl)
-			cl.points[i,1] = L[1]*(-1 + 2*(i-1)/cl.N[1])
-		end
-	elseif cl.dim==2
-		for i=1:Npoints(cl)
-			cl.points[i,1] = L[1]*(-1 + 2*rem(i-1,cl.N[1])/cl.N[1])
-			cl.points[i,2] = L[2]*(-1 + 2*div(i-1,cl.N[1])/cl.N[2])
-		end
-	elseif cl.dim==3
-		for i=1:Npoints(cl)
-			cl.points[i,1] = L[1]*(-1 + 2*rem(i-1,cl.N[1])/cl.N[1])
-			cl.points[i,2] = L[2]*(-1 + 2*rem(div(i-1,cl.N[1]),cl.N[2])/cl.N[2])
-			cl.points[i,3] = L[3]*(-1 + 2*div(i-1,cl.N[1]*cl.N[2])/cl.N[3])
-		end
-	else
-		throw(ArgumentError("cloud dimension must be 1,2, or 3"))
+	for i=1:Npoints(cl)
+		A = tovec(i, cl.N)
+		@. cl.points[i,1:end] = L*(-1 + 2*A/cl.N)
 	end
 end
-
-function get_originindex(N::Vector{T} where T<:Integer)
-	if length(N)==1
-		return div(N[1],2)
-	else
-		return div(prod(N),2) + get_originindex(N[1:end-1])
-	end
-end
-get_originindex(cl::Cloud)	= get_originindex(cl.N)
-get_originindex(cs::Cscalar)= get_originindex(cs.cl.N)
 
 # sample a function, f, on a cloud as a complex scalar field
 function sample!(cs::Cscalar, f::Function)
@@ -152,7 +122,7 @@ end
 function tovtk(cl::Cloud, filename::AbstractString)
 	f = open(filename, "w")
 	writepreamble(f, "Point cloud")
-	writepoints(f, cl.dim, Npoints(cl), cl.points)
+	writepoints(f, dim(cl), Npoints(cl), cl.points)
 	writeverts(f,Npoints(cl))
 	close(f)
 end
@@ -160,7 +130,7 @@ end
 function tovtk(scl::SubCloud, filename::AbstractString)
 	f = open(filename, "w")
 	writepreamble(f, "Point (sub) cloud")
-	writepoints(f, scl.cl.dim, Npoints(scl), scl.cl.points[scl.verts,1:end])
+	writepoints(f, dim(scl), Npoints(scl), scl.cl.points[scl.verts,1:end])
 	writeverts(f,Npoints(scl))
 	close(f)
 end
@@ -168,7 +138,7 @@ end
 function tovtk(cs::Cscalar, filename::AbstractString)
 	f = open(filename, "w")
 	writepreamble(f, "Complex scalar field")
-	writepoints(f, cs.cl.dim, Npoints(cs.cl), cs.cl.points)
+	writepoints(f, dim(cs), Npoints(cs.cl), cs.cl.points)
 	writeverts(f,Npoints(cs.cl))
 	print(f, "CELL_DATA "*string(Npoints(cs.cl))*"\n")
 	writescalars(f,"real",Npoints(cs.cl),real.(cs.values))
@@ -179,7 +149,7 @@ end
 function tovtk(scs::SubCscalar, filename::AbstractString)
 	f = open(filename, "w")
 	writepreamble(f, "Complex (sub) scalar field")
-	writepoints(f, scs.cs.cl.dim, Npoints(scs), scs.cs.cl.points[scs.verts,1:end])
+	writepoints(f, dim(scs), Npoints(scs), scs.cs.cl.points[scs.verts,1:end])
 	writeverts(f,Npoints(scs))
 	print(f, "CELL_DATA "*string(Npoints(scs))*"\n")
 	writescalars(f,"real",Npoints(scs),real.(scs.cs.values[scs.verts]))
@@ -240,7 +210,7 @@ end
 
 function tocsv(scs::SubCscalar, filename)
 	f = open(filename, "w")
-	if scs.cs.cl.dim==3
+	if dim(scs)==3
 		print(f, "x,y,z,Re,Im\n")
 		for i=1:Npoints(scs)
 			print(f,
@@ -250,7 +220,7 @@ function tocsv(scs::SubCscalar, filename)
 				"$(real(scs.cs.values[scs.verts[i]])),"*
 				"$(imag(scs.cs.values[scs.verts[i]]))\n")
 		end
-	elseif scs.cs.cl.dim==2
+	elseif dim(scs)==2
 		print(f, "x,y,Re,Im\n")
 		for i=1:Npoints(scs)
 			print(f,
@@ -259,7 +229,7 @@ function tocsv(scs::SubCscalar, filename)
 				"$(real(scs.cs.values[scs.verts[i]])),"*
 				"$(imag(scs.cs.values[scs.verts[i]]))\n")
 		end
-	elseif scs.cs.cl.dim==1
+	elseif dim(scs)==1
 		print(f, "x,Re,Im\n")
 		for i=1:Npoints(scs)
 			print(f,

@@ -16,7 +16,7 @@ export
 	Cscalar,
 	sample!,
 	slice,
-	get_originindex,
+	dim,
 
 	# from fourier.jl:
 	test,

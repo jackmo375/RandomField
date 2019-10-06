@@ -1,13 +1,3 @@
-"""
-	test()
-
-an function to check the module loads.
-"""
-function test()
-	print("Hello world\n")
-end
-
-
 #
 #	Process
 #
@@ -54,25 +44,9 @@ end
 
 # Phase shift
 function phase_shift!(Y::Cscalar)
-	if Y.cl.dim==1
-		for i=1:Npoints(Y.cl)
-			Y.values[i] *= (-1)^(i-1)
-		end
-	elseif Y.cl.dim==2
-		for i=1:Npoints(Y.cl)
-			Y.values[i] *= (-1)^(
-				rem(i-1,Y.cl.N[1])
-				+ div(i-1,Y.cl.N[1]))
-		end
-	elseif Y.cl.dim==3
-		for i=1:Npoints(Y.cl)
-			Y.values[i] *= (-1)^(
-				rem(i-1,Y.cl.N[1])
-				+ rem(div(i-1,Y.cl.N[1]),Y.cl.N[2])
-				+ div(i-1,Y.cl.N[1]*Y.cl.N[2]))
-		end
-	else
-		throw(ArgumentError("cloud dimension must be 1,2, or 3"))
+
+	for i=1:Npoints(Y)
+		Y.values[i] *= (-1)^sum(tovec(i,Y.cl.N))
 	end
 end
 
@@ -89,7 +63,7 @@ function ift!(G::Cscalar, F::Cscalar)
 
 	L = G.cl.points[end,1:end]
 	N = G.cl.N
-	d = G.cl.dim
+	d = dim(G)
 	G.values .*= (pi/2)^(d/2)*prod(N)/prod(L)
 
 end
