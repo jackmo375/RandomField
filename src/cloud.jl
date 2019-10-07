@@ -241,4 +241,21 @@ function tocsv(scs::SubCscalar, filename)
 		throw(ArgumentError("invalid number of dimensions specified."))
 	end
 	close(f)
-end	
+end
+
+# warning: this function creates a big memory block; 
+# not yet optimised for performance.
+function surface(cs::Cscalar)
+
+	dim(cs) == 2 || throw(ArgumentError("input Cscalar needs to be dimension 2"))
+
+	N = [cs.cl.N[1], cs.cl.N[2], 1]
+
+	# allocate memory
+	points = Array{Float64,2}(undef, Npoints(N), dim(N))
+
+	@. points[1:end,1:2] = cs.cl.points[1:end,1:2]
+	@. points[1:end,3]   = real(cs.values[1:end])
+
+	Cloud(N,points)
+end

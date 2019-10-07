@@ -17,18 +17,14 @@ export
 	sample!,
 	slice,
 	dim,
+	surface,
 
 	# from fourier.jl:
-	test,
 	create_grids,
-	#phase_shift,
 	ift!,
 
 	# from random.jl
 	draw_realization!
-
-	# from FFTW
-	#ifft
 
 include("functions.jl")
 
